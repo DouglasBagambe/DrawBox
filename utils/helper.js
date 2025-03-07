@@ -8,6 +8,7 @@ export const shortenAddress = (address, chars = 4) => {
 };
 
 export const formatEther = (wei) => {
+  if (!wei) return "";
   return ethers.utils.formatEther(wei);
 };
 

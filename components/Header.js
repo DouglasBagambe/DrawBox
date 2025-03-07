@@ -27,15 +27,15 @@ const Header = () => {
       className={`sticky top-0 z-50 transition-all duration-300 ${
         scrolled
           ? "bg-black/90 backdrop-blur-lg"
-          : "bg-gradient-to-r from-blue-900/50 to-purple-900/50 backdrop-blur-sm"
+          : "bg-gradient-to-r from-purple-900 to-blue-900 backdrop-blur-sm"
       }`}
       onMouseMove={handleMouseMove}
     >
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 w-full h-full">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full filter blur-3xl animate-pulse" />
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full filter blur-3xl animate-pulse delay-1000" />
-        </div>
+        {/* <div className="absolute inset-0 w-full h-full">
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-900 rounded-full filter blur-3xl animate-pulse" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-900 rounded-full filter blur-3xl animate-pulse delay-1000" />
+        </div> */}
         <div className="max-w-7xl mx-auto px-6 py-4 relative">
           <div className="flex justify-between items-center">
             <div className="group cursor-pointer">

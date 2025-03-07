@@ -1,7 +1,8 @@
-// utils/program.js
+// utils/contract.js
 
 import { ethers } from "ethers";
 import { LOTTERY_CONTRACT_ADDRESS, LOTTERY_ABI } from "./constants";
+import { parseEther } from "./helper"; // Add this import
 
 export const getContract = (providerOrSigner) => {
   return new ethers.Contract(
@@ -38,3 +39,6 @@ export const getTicketInfo = async (provider, lotteryId, ticketId) => {
 export const getTotalPrize = (lottery) => {
   return ethers.utils.formatEther(lottery.lastTicketId * lottery.ticketPrice);
 };
+
+// Export parseEther from helper.js
+export { parseEther };
