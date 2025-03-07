@@ -2,17 +2,7 @@
 
 import React, { useEffect } from "react";
 import { Ticket, Trophy, Coins } from "lucide-react";
-import { useWallet } from "@solana/wallet-adapter-react";
-import dynamic from "next/dynamic";
-
-import { Sparkles } from "lucide-react";
-const WalletMultiButton = dynamic(
-  () =>
-    import("@solana/wallet-adapter-react-ui").then(
-      (mod) => mod.WalletMultiButton
-    ),
-  { ssr: false }
-);
+import { useAccount } from "wagmi";
 import { useAppContext } from "../context/context";
 import {
   Card,
@@ -20,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-} from "../components/ui/card";
+} from "./ui/card";
 import {
   LineChart,
   Line,
@@ -30,9 +20,10 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { formatEther } from "../utils/helper";
 
 const LotteryDisplay = ({
-  wallet,
+  isConnected,
   lottery,
   tickets,
   userWinningId,
@@ -41,23 +32,12 @@ const LotteryDisplay = ({
   handlePickWinner,
   handleClaimPrize,
 }) => {
-  if (!wallet.connected) {
-    return null;
-  }
+  if (!isConnected) return null;
 
-  // Check if user has any tickets for this lottery
-  const userHasTickets = tickets?.some(
-    (ticket) =>
-      ticket.account.authority.toString() === wallet.publicKey.toString()
-  );
-  console.log("Tickets:", tickets);
+  const userHasTickets = tickets.some((t) => t.owner === useAccount().address);
+  const prize = lottery ? formatEther(lottery.totalPrize) : "0.00";
 
-  const prize =
-    lottery && lottery.ticketPrice && lottery.lastTicketId
-      ? ((lottery.ticketPrice * lottery.lastTicketId) / 1000000000).toFixed(2)
-      : "0.00";
-
-  if (lottery?.winnerId) {
+  if (lottery?.winnerChosen) {
     const userHasWinningTicket = userWinningId === lottery.winnerId;
 
     if (userHasWinningTicket && !lottery.claimed) {
@@ -126,14 +106,13 @@ const LotteryDisplay = ({
     }
   }
 
-  // If lottery is still ongoing (no winner picked yet)
   return (
     <div className="flex gap-3">
       <button
         onClick={handleBuyTicket}
         className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
       >
-        Buy Ticket ({(lottery?.ticketPrice / 1000000000).toFixed(2)} SOL)
+        Buy Ticket ({formatEther(lottery?.ticketPrice)} ETH)
       </button>
       {isLotteryAuthority && (
         <button
@@ -148,7 +127,7 @@ const LotteryDisplay = ({
 };
 
 const LotteryDapp = () => {
-  const wallet = useWallet();
+  const { address, isConnected } = useAccount();
   const {
     lottery,
     tickets,
@@ -159,9 +138,7 @@ const LotteryDapp = () => {
     buyTicket,
     pickWinner,
     claimPrize,
-    userTicketHistory,
-    fetchTickets,
-    getHistory,
+    lotteryPot,
   } = useAppContext();
 
   const [loadingDots, setLoadingDots] = React.useState("");
@@ -172,114 +149,12 @@ const LotteryDapp = () => {
     }, 500);
     return () => clearInterval(interval);
   }, []);
-  // Add this useEffect after your existing one
-  useEffect(() => {
-    if (!lottery || !wallet?.publicKey) return;
-    fetchTickets();
-    getHistory();
-  }, [lottery, wallet?.publicKey]);
 
-  const handleCreateLottery = async () => {
-    try {
-      await createLottery(1000000000);
-    } catch (error) {
-      console.error("Error creating lottery:", error);
-    }
-  };
-
-  const handleBuyTicket = async () => {
-    try {
-      await buyTicket();
-    } catch (error) {
-      console.error("Error buying ticket:", error);
-    }
-  };
-
-  const handlePickWinner = async () => {
-    try {
-      await pickWinner();
-    } catch (error) {
-      console.error("Error picking winner:", error);
-    }
-  };
-
-  const handleClaimPrize = async () => {
-    try {
-      await claimPrize();
-    } catch (error) {
-      console.error("Error claiming prize:", error);
-    }
-  };
-
-  const shortenPk = (pk) => {
-    if (!pk) return "";
-    const pkString = pk.toString();
-    return `${pkString.slice(0, 4)}...${pkString.slice(-4)}`;
-  };
-
-  const userTicket =
-    tickets && lottery?.winnerId
-      ? tickets.find(
-          (ticket) =>
-            ticket.account.authority.toString() ===
-              wallet.publicKey?.toString() &&
-            ticket.account.id === lottery.winnerId
-        )
-      : null;
-
-  // const userWinningId = userTicket?.account?.id || null;
+  const shortenPk = (pk) => (pk ? `${pk.slice(0, 4)}...${pk.slice(-4)}` : "");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-black">
-      <header className="sticky top-0 z-50 transition-all duration-300 bg-gradient-to-r from-black/80 to-black/90 backdrop-blur-lg border-b border-blue-900/50">
-        <div className="relative overflow-hidden w-full mx-auto px-6 py-4">
-          {/* Animated background elements */}
-          <div className="absolute inset-0 w-full h-full">
-            <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full filter blur-3xl animate-pulse" />
-            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full filter blur-3xl animate-pulse delay-1000" />
-          </div>
-
-          {/* Main content */}
-          <div className="flex justify-between items-center relative z-10">
-            {/* Logo section */}
-            <div className="group cursor-pointer">
-              <div className="flex items-center space-x-2">
-                <div className="relative">
-                  <Coins className="w-8 h-8 text-yellow-400 animate-bounce" />
-                  <Sparkles
-                    className="absolute -top-1 -right-1 w-4 h-4 text-yellow-300 animate-spin"
-                    style={{
-                      left: "50%",
-                      top: "50%",
-                      transform: "translate(-50%, -50%)",
-                    }}
-                  />
-                </div>
-                <h1 className="text-4xl font-bold">
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
-                    Soltery
-                  </span>
-                </h1>
-              </div>
-              <p className="text-blue-300 text-sm mt-1 transform transition-all group-hover:translate-x-2">
-                Your ticket to decentralized fortune
-              </p>
-            </div>
-
-            {/* Wallet Button */}
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg blur opacity-30 group-hover:opacity-100 transition-all" />
-              <div className="relative">
-                <WalletMultiButton />
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main content */}
       <main className="max-w-[1920px] mx-auto px-6 py-8">
-        {/* All cards in one row */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div>
             <Card className="bg-black/40 backdrop-blur border border-blue-900/20 shadow-xl">
@@ -296,35 +171,26 @@ const LotteryDapp = () => {
                 <div className="bg-blue-950/50 border border-blue-800/20 rounded-lg p-4">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-semibold text-white">
-                      Pot:{" "}
-                      {lottery
-                        ? (
-                            (lottery.ticketPrice * lottery.lastTicketId) /
-                            1000000000
-                          ).toFixed(2)
-                        : "0"}{" "}
-                      SOL
+                      Pot: {lotteryPot} ETH
                     </h3>
                     <span className="px-3 py-1 rounded-full text-sm bg-blue-600/40 text-blue-200">
-                      {lottery?.winnerId ? "Completed" : "Active"}
+                      {lottery?.winnerChosen ? "Completed" : "Active"}
                     </span>
                   </div>
-
                   <LotteryDisplay
-                    wallet={wallet}
+                    isConnected={isConnected}
                     lottery={lottery}
                     tickets={tickets}
                     userWinningId={userWinningId}
                     isLotteryAuthority={isLotteryAuthority}
-                    handleBuyTicket={handleBuyTicket}
-                    handlePickWinner={handlePickWinner}
+                    handleBuyTicket={buyTicket}
+                    handlePickWinner={pickWinner}
                     handleClaimPrize={claimPrize}
                   />
                 </div>
               </CardContent>
             </Card>
-
-            {wallet.connected && (
+            {isConnected && (
               <Card className="mt-6 bg-black/40 backdrop-blur border border-blue-900/20 shadow-xl">
                 <CardHeader className="border-b border-blue-900/20">
                   <CardTitle className="flex items-center gap-2 text-white">
@@ -334,8 +200,8 @@ const LotteryDapp = () => {
                 </CardHeader>
                 <CardContent className="p-6">
                   <button
-                    onClick={handleCreateLottery}
-                    disabled={lottery && !lottery.winnerId}
+                    onClick={createLottery}
+                    disabled={lottery && !lottery.winnerChosen}
                     className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-900 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
                   >
                     Create New Lottery
@@ -344,8 +210,6 @@ const LotteryDapp = () => {
               </Card>
             )}
           </div>
-
-          {/* Performance & Analytics */}
           <Card className="bg-black/40 backdrop-blur border border-blue-900/20 shadow-xl h-[600px] flex flex-col">
             <CardHeader className="border-b border-blue-900/20 flex-none">
               <CardTitle className="flex items-center gap-2 text-white">
@@ -357,76 +221,50 @@ const LotteryDapp = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6 overflow-y-auto flex-1">
-              {wallet.connected ? (
+              {isConnected ? (
                 <>
                   <div className="bg-indigo-900/30 p-4 rounded-lg border border-indigo-500/20 mb-4">
                     <div className="text-indigo-300 text-sm">Total Tickets</div>
                     <div className="text-2xl font-bold text-white">
-                      {(() => {
-                        const historicalTickets =
-                          userTicketHistory?.length || 0;
-                        const currentTickets =
-                          tickets?.filter(
-                            (ticket) =>
-                              ticket.account.authority.toString() ===
-                              wallet.publicKey?.toString()
-                          ).length || 0;
-                        return historicalTickets + currentTickets;
-                      })()}
+                      {tickets.length + lotteryHistory.length}
                     </div>
                   </div>
-
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="bg-indigo-900/30 p-4 rounded-lg border border-indigo-500/20">
                       <div className="text-indigo-300 text-sm">Tickets Won</div>
                       <div className="text-2xl font-bold text-white">
-                        {(() => {
-                          const winningTickets =
-                            lotteryHistory?.filter(
-                              (h) =>
-                                h.winnerAddress.toString() ===
-                                wallet.publicKey?.toString()
-                            ).length || 0;
-                          return winningTickets;
-                        })()}
+                        {
+                          lotteryHistory.filter((h) => h.authority === address)
+                            .length
+                        }
                       </div>
                     </div>
                     <div className="bg-purple-900/30 p-4 rounded-lg border border-purple-500/20">
                       <div className="text-purple-300 text-sm">Win Rate</div>
                       <div className="text-2xl font-bold text-white">
-                        {(() => {
-                          const totalTickets = userTicketHistory?.length || 0;
-                          const winningTickets =
-                            lotteryHistory?.filter(
-                              (h) =>
-                                h.winnerAddress.toString() ===
-                                wallet.publicKey?.toString()
-                            ).length || 0;
-                          return totalTickets > 0
-                            ? `${(
-                                (winningTickets / totalTickets) *
-                                100
-                              ).toFixed(1)}%`
-                            : "0%";
-                        })()}
+                        {tickets.length > 0
+                          ? `${(
+                              (lotteryHistory.filter(
+                                (h) => h.authority === address
+                              ).length /
+                                tickets.length) *
+                              100
+                            ).toFixed(1)}%`
+                          : "0%"}
                       </div>
                     </div>
                   </div>
-
                   <div className="h-60">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart
-                        data={lotteryHistory?.map((h) => ({
-                          time: `#${h.lotteryId}`,
+                        data={lotteryHistory.map((h) => ({
+                          time: `#${h.id}`,
                           netGain:
-                            h.winnerAddress.toString() ===
-                            wallet.publicKey?.toString()
-                              ? parseFloat(h.prize)
-                              : -1 * (lottery?.ticketPrice / 1000000000),
-                          isWin:
-                            h.winnerAddress.toString() ===
-                            wallet.publicKey?.toString(),
-                          prize: h.prize,
+                            h.authority === address
+                              ? parseFloat(formatEther(h.totalPrize))
+                              : -0.01,
+                          isWin: h.authority === address,
+                          prize: formatEther(h.totalPrize),
                           ticketId: h.winnerId,
                         }))}
                       >
@@ -457,15 +295,11 @@ const LotteryDapp = () => {
                                   </p>
                                   {data.isWin ? (
                                     <p className="text-green-400">
-                                      Won: {data.prize} SOL
+                                      Won: {data.prize} ETH
                                     </p>
                                   ) : (
                                     <p className="text-red-400">
-                                      Lost:{" "}
-                                      {(
-                                        lottery?.ticketPrice / 1000000000
-                                      ).toFixed(2)}{" "}
-                                      SOL
+                                      Lost: 0.01 ETH
                                     </p>
                                   )}
                                 </div>
@@ -498,8 +332,6 @@ const LotteryDapp = () => {
               )}
             </CardContent>
           </Card>
-
-          {/* My Ticket History */}
           <Card className="bg-black/40 backdrop-blur border border-blue-900/20 shadow-xl h-[600px] flex flex-col">
             <CardHeader className="border-b border-blue-900/20 flex-none">
               <CardTitle className="flex items-center gap-2 text-white">
@@ -508,116 +340,63 @@ const LotteryDapp = () => {
             </CardHeader>
             <CardContent className="p-6 overflow-y-auto flex-1">
               <div className="bg-blue-950/50 border border-blue-800/20 rounded-lg p-4">
-                {wallet.connected && (
+                {isConnected && (
                   <div className="space-y-3">
-                    {(() => {
-                      const allTickets = [
-                        ...(tickets?.filter(
-                          (ticket) =>
-                            ticket.account.authority.toString() ===
-                            wallet.publicKey?.toString()
-                        ) || []),
-                        ...(lotteryHistory
-                          ?.filter(
-                            (h) =>
-                              h.winnerAddress.toString() ===
-                              wallet.publicKey?.toString()
-                          )
-                          .map((h) => ({
-                            account: {
-                              id: h.winnerId,
-                              lotteryId: h.lotteryId,
-                              authority: wallet.publicKey,
-                            },
-                            historical: true,
-                            prize: h.prize,
-                          })) || []),
-                      ];
-
-                      return allTickets
-                        .sort(
-                          (a, b) =>
-                            b.account.lotteryId - a.account.lotteryId ||
-                            b.account.id - a.account.id
-                        )
-                        .map((ticket, idx) => {
-                          const isWinningTicket =
-                            lottery?.winnerId === ticket.account.id ||
-                            (ticket.historical && ticket.prize);
-                          const potentialPrize = ticket.historical
-                            ? ticket.prize
-                            : (lottery?.ticketPrice * lottery?.lastTicketId) /
-                              1000000000;
-
-                          return (
-                            <div
-                              key={idx}
-                              className={`${
-                                isWinningTicket
-                                  ? "bg-amber-900/30"
-                                  : "bg-slate-800/30"
-                              } p-4 rounded-lg border ${
-                                isWinningTicket
-                                  ? "border-amber-500/20"
-                                  : "border-slate-700"
-                              } hover:border-blue-500/30 transition-all`}
-                            >
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <p
-                                      className={`${
-                                        isWinningTicket
-                                          ? "text-amber-400"
-                                          : "text-blue-400"
-                                      } text-sm font-medium`}
-                                    >
-                                      Lottery #{ticket.account.lotteryId} -
-                                      Ticket #{ticket.account.id}
-                                      {ticket.historical ? " (Past)" : ""}
-                                    </p>
-                                    {isWinningTicket && (
-                                      <span className="bg-amber-500/20 text-amber-300 text-xs px-2 py-1 rounded-full">
-                                        Winner!
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-slate-400 text-sm mt-1">
-                                    {ticket.historical
-                                      ? `Won: ${ticket.prize} SOL`
-                                      : `Potential Prize: ${potentialPrize?.toFixed(
-                                          2
-                                        )} SOL`}
-                                  </p>
-                                </div>
-                                {isWinningTicket &&
-                                  !ticket.historical &&
-                                  lottery &&
-                                  !lottery.claimed && (
-                                    <button
-                                      onClick={() =>
-                                        claimPrize(
-                                          lottery.id,
-                                          ticket.account.id
-                                        )
-                                      }
-                                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
-                                    >
-                                      Claim Prize
-                                    </button>
-                                  )}
+                    {tickets.map((ticket, idx) => {
+                      const isWinningTicket = lottery?.winnerId === ticket.id;
+                      return (
+                        <div
+                          key={idx}
+                          className={`${
+                            isWinningTicket
+                              ? "bg-amber-900/30"
+                              : "bg-slate-800/30"
+                          } p-4 rounded-lg border ${
+                            isWinningTicket
+                              ? "border-amber-500/20"
+                              : "border-slate-700"
+                          } hover:border-blue-500/30 transition-all`}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p
+                                  className={`${
+                                    isWinningTicket
+                                      ? "text-amber-400"
+                                      : "text-blue-400"
+                                  } text-sm font-medium`}
+                                >
+                                  Lottery #{ticket.lotteryId} - Ticket #
+                                  {ticket.id}
+                                </p>
+                                {isWinningTicket && (
+                                  <span className="bg-amber-500/20 text-amber-300 text-xs px-2 py-1 rounded-full">
+                                    Winner!
+                                  </span>
+                                )}
                               </div>
+                              <p className="text-slate-400 text-sm mt-1">
+                                Prize: {lotteryPot} ETH
+                              </p>
                             </div>
-                          );
-                        });
-                    })()}
+                            {isWinningTicket && !lottery.claimed && (
+                              <button
+                                onClick={claimPrize}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                              >
+                                Claim Prize
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
             </CardContent>
           </Card>
-
-          {/* Overall Lottery History */}
           <Card className="bg-black/40 backdrop-blur border border-blue-900/20 shadow-xl h-[600px] flex flex-col">
             <CardHeader className="border-b border-blue-900/20 flex-none">
               <CardTitle className="flex items-center gap-2 text-white">
@@ -632,18 +411,17 @@ const LotteryDapp = () => {
                   <div>Winning Ticket</div>
                   <div>Prize</div>
                 </div>
-
                 <div className="divide-y divide-blue-800/20">
-                  {lotteryHistory && lotteryHistory.length > 0 ? (
+                  {lotteryHistory.length > 0 ? (
                     lotteryHistory.map((h, i) => (
                       <div
                         key={i}
                         className="grid grid-cols-4 gap-4 py-3 text-center text-blue-100"
                       >
-                        <div>#{h.lotteryId}</div>
-                        <div>{shortenPk(h.winnerAddress)}</div>
+                        <div>#{h.id}</div>
+                        <div>{shortenPk(h.authority)}</div>
                         <div>#{h.winnerId}</div>
-                        <div>{h.prize} SOL</div>
+                        <div>{formatEther(h.totalPrize)} ETH</div>
                       </div>
                     ))
                   ) : (
