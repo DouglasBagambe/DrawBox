@@ -1,7 +1,13 @@
 // context/context.js
 
-import { createContext, useState, useEffect, useContext, useCallback } from "react";
-import { ethers, Signer } from "ethers";
+import {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+} from "react";
+import { ethers } from "ethers";
 import { useAccount, useSigner } from "wagmi";
 import toast from "react-hot-toast";
 import {
@@ -24,7 +30,7 @@ export const AppProvider = ({ children }) => {
   const [userTicketHistory, setUserTicketHistory] = useState([]);
 
   const { address, isConnected } = useAccount();
-  const { data: signer } = useSigner() as { data: Signer | undefined };
+  const { data: signer } = useSigner(); // Fixed line: no type assertion
   const provider = ethers.providers.getDefaultProvider("http://127.0.0.1:8545"); // Hardhat node
 
   const updateState = useCallback(async () => {
