@@ -1,3 +1,5 @@
+// components/LotteryDapp.js
+
 import React, { useEffect } from "react";
 import { Ticket, Trophy, Coins } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";

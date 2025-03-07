@@ -1,3 +1,5 @@
+// components/Header.js
+
 import React, { useState, useEffect } from "react";
 import { Sparkles, Coins } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";

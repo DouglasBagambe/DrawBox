@@ -1,3 +1,5 @@
+// utils/constants.js
+
 import { PublicKey } from "@solana/web3.js";
 
 export const MASTER_SEED = "master";

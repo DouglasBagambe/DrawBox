@@ -1,3 +1,5 @@
+// utils/helper.js
+
 export const mockWallet = () => {
   return {};
 };

@@ -1,3 +1,5 @@
+// context/context.js
+
 import { createContext, useState, useEffect, useContext, useMemo } from "react";
 import { BN } from "@project-serum/anchor";
 import { SystemProgram, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";

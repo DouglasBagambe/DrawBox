@@ -1,3 +1,5 @@
+// pages/index.js
+
 import { useMemo } from "react";
 import {
   ConnectionProvider,
