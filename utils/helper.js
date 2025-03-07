@@ -1,19 +1,16 @@
 // utils/helper.js
 
-export const mockWallet = () => {
-  return {};
+import { ethers } from "ethers";
+
+export const shortenAddress = (address, chars = 4) => {
+  if (!address) return "";
+  return `${address.slice(0, chars)}...${address.slice(-chars)}`;
 };
 
-export const shortenPk = (pk, chars = 5) => {
-  const pkStr = typeof pk === "object" ? pk.toBase58() : pk;
-  return `${pkStr.slice(0, chars)}...${pkStr.slice(-chars)}`;
+export const formatEther = (wei) => {
+  return ethers.utils.formatEther(wei);
 };
 
-export const confirmTx = async (txHash, connection) => {
-  const blockhashInfo = await connection.getLatestBlockhash();
-  await connection.confirmTransaction({
-    blockhash: blockhashInfo.blockhash,
-    lastValidBlockHeight: blockhashInfo.lastValidBlockHeight,
-    signature: txHash,
-  });
+export const parseEther = (ether) => {
+  return ethers.utils.parseEther(ether);
 };
