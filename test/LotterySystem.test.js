@@ -23,7 +23,7 @@ describe("LotterySystem", function () {
     await lottery
       .connect(addr1)
       .buyTicket(1, { value: ethers.utils.parseEther("0.01") });
-    const ticketInfo = await lottery.getTicketInfo(1, 1);
-    expect(ticketInfo.owner).to.equal(addr1.address);
+    const [id, lotteryId, ticketOwner] = await lottery.getTicketInfo(1, 1); // Destructure tuple
+    expect(ticketOwner).to.equal(addr1.address);
   });
 });
