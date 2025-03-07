@@ -31,10 +31,11 @@ const LotteryDisplay = ({
   handleBuyTicket,
   handlePickWinner,
   handleClaimPrize,
+  address, // Add address as prop
 }) => {
   if (!isConnected) return null;
 
-  const userHasTickets = tickets.some((t) => t.owner === useAccount().address);
+  const userHasTickets = tickets.some((t) => t.owner === address);
   const prize = lottery ? formatEther(lottery.totalPrize) : "0.00";
 
   if (lottery?.winnerChosen) {
@@ -186,6 +187,7 @@ const LotteryDapp = () => {
                     handleBuyTicket={buyTicket}
                     handlePickWinner={pickWinner}
                     handleClaimPrize={claimPrize}
+                    address={address} // Pass address as prop
                   />
                 </div>
               </CardContent>
