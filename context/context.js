@@ -1,7 +1,7 @@
 // context/context.js
 
-import { createContext, useState, useEffect, useContext } from "react";
-import { ethers } from "ethers";
+import { createContext, useState, useEffect, useContext, useCallback } from "react";
+import { ethers, Signer } from "ethers";
 import { useAccount, useSigner } from "wagmi";
 import toast from "react-hot-toast";
 import {
@@ -24,15 +24,10 @@ export const AppProvider = ({ children }) => {
   const [userTicketHistory, setUserTicketHistory] = useState([]);
 
   const { address, isConnected } = useAccount();
-  const { data: signer } = useSigner();
+  const { data: signer } = useSigner() as { data: Signer | undefined };
   const provider = ethers.providers.getDefaultProvider("http://127.0.0.1:8545"); // Hardhat node
 
-  useEffect(() => {
-    if (!isConnected || !signer) return;
-    updateState();
-  }, [isConnected, signer]);
-
-  const updateState = async () => {
+  const updateState = useCallback(async () => {
     try {
       const contract = getContract(provider);
       const currentId = await contract.lotteryIdCounter();
@@ -42,7 +37,7 @@ export const AppProvider = ({ children }) => {
       setLottery(lotteryData);
       setLotteryPot(getTotalPrize(lotteryData));
 
-      // Fetch tickets (simplified for now, expand with KRNL later)
+      // Fetch tickets
       const ticketPromises = [];
       for (let i = 1; i <= lotteryData.lastTicketId; i++) {
         ticketPromises.push(getTicketInfo(provider, currentId, i));
@@ -56,7 +51,7 @@ export const AppProvider = ({ children }) => {
         setUserWinningId(userTicket.id);
       }
 
-      // History (simplified, fetch all past lotteries)
+      // Fetch history
       const historyPromises = [];
       for (let i = 1; i < currentId; i++) {
         historyPromises.push(getLotteryInfo(provider, i));
@@ -66,7 +61,12 @@ export const AppProvider = ({ children }) => {
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [provider, address]);
+
+  useEffect(() => {
+    if (!isConnected || !signer) return;
+    updateState();
+  }, [isConnected, signer, updateState]);
 
   const createLottery = async () => {
     const contract = getContract(signer);
