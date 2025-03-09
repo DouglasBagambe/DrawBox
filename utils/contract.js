@@ -37,7 +37,9 @@ export const getTicketInfo = async (provider, lotteryId, ticketId) => {
 };
 
 export const getTotalPrize = (lottery) => {
-  return ethers.utils.formatEther(lottery.lastTicketId * lottery.ticketPrice);
+  const lastTicketId = ethers.BigNumber.from(lottery.lastTicketId);
+  const ticketPrice = ethers.BigNumber.from(lottery.ticketPrice);
+  return ethers.utils.formatEther(lastTicketId.mul(ticketPrice));
 };
 
 // Export parseEther from helper.js

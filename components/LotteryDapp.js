@@ -140,6 +140,8 @@ const LotteryDapp = () => {
     pickWinner,
     claimPrize,
     lotteryPot,
+    refreshState,
+    assignParticipantRole,
   } = useAppContext();
 
   const [loadingDots, setLoadingDots] = React.useState("");
@@ -152,6 +154,12 @@ const LotteryDapp = () => {
   }, []);
 
   const shortenPk = (pk) => (pk ? `${pk.slice(0, 4)}...${pk.slice(-4)}` : "");
+
+  // useEffect(() => {
+  //   console.log("Lottery:", lottery);
+  //   console.log("Tickets:", tickets);
+  //   console.log("Lottery History:", lotteryHistory);
+  // }, [lottery, tickets, lotteryHistory]); // Only log on state change
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-black">
@@ -187,8 +195,20 @@ const LotteryDapp = () => {
                     handleBuyTicket={buyTicket}
                     handlePickWinner={pickWinner}
                     handleClaimPrize={claimPrize}
-                    address={address} // Pass address as prop
+                    address={address}
                   />
+                  <button
+                    onClick={assignParticipantRole}
+                    className="w-full mt-4 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
+                  >
+                    Become Participant
+                  </button>
+                  <button
+                    onClick={refreshState}
+                    className="w-full mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                  >
+                    Refresh
+                  </button>
                 </div>
               </CardContent>
             </Card>
