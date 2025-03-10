@@ -46,34 +46,6 @@ export const AppProvider = ({ children }) => {
     []
   );
 
-  const assignParticipantRole = async () => {
-    try {
-      // Only attempt if connected
-      if (!isConnected || !signer) {
-        toast.error("Please connect your wallet first");
-        return;
-      }
-      const contract = getContract(signer);
-      // Attempt to call getCurrentAuthority first
-      try {
-        const authority = await contract.getCurrentAuthority();
-        const tx = await contract.assignRole(address, "participant");
-        await tx.wait();
-        toast.success("Participant role assigned!");
-        await updateState(); // Refresh state after role assignment
-      } catch (error) {
-        // Try using requestRole instead
-        const tx = await contract.requestRole("participant");
-        await tx.wait();
-        toast.success("Role requested successfully!");
-        await updateState();
-      }
-    } catch (err) {
-      toast.error("Failed to assign participant role: " + err.message);
-      console.error(err);
-    }
-  };
-
   const updateState = useCallback(async () => {
     if (!provider) {
       console.log("No provider available");
@@ -133,15 +105,49 @@ export const AppProvider = ({ children }) => {
 
   const createLottery = async () => {
     try {
+      console.log("Creating lottery with address:", address);
       const contract = getContract(signer);
-      console.log("Creating lottery on contract:", contract.address);
-      // Check if user is authority first
+      console.log("Got contract with address:", contract.address);
+
+      toast.loading("Checking roles...");
+
+      // Check if user is participant
+      console.log("Checking if user is participant");
+      const isUserParticipant = await contract.isParticipant(address);
+      console.log("Is participant:", isUserParticipant);
+
+      if (!isUserParticipant) {
+        console.log("Assigning participant role");
+        toast.loading("Assigning participant role...");
+        const txRole = await contract.assignRole(address, "participant");
+        await txRole.wait();
+        toast.success("Participant role assigned!");
+      }
+
+      // Check if user is authority
+      console.log("Checking if user is authority");
       const isUserAuthority = await contract.isAuthority(address);
+      console.log("Is authority:", isUserAuthority);
+
       if (!isUserAuthority) {
+        console.log("Not authority, checking if owner");
+        const ownerAddress = await contract.owner();
+        console.log("Owner address:", ownerAddress);
+        console.log("Current address:", address);
+
+        if (ownerAddress.toLowerCase() !== address.toLowerCase()) {
+          toast.error("Only the owner can create lotteries initially");
+          return;
+        }
+
+        console.log("Is owner, assigning authority role");
         const txRole = await contract.assignRole(address, "authority");
         await txRole.wait();
         toast.success("Authority role assigned!");
       }
+
+      console.log("Creating lottery with ticket price 0.01 ETH");
+      toast.loading("Creating lottery...");
       const tx = await contract.createLottery(parseEther("0.01"));
       console.log("Create Tx hash:", tx.hash);
       const receipt = await tx.wait();
@@ -149,8 +155,10 @@ export const AppProvider = ({ children }) => {
       toast.success("Lottery created!");
       await updateState();
     } catch (err) {
-      toast.error("Failed to create lottery: " + err.message);
-      console.error(err);
+      console.error("Create lottery error:", err);
+      toast.error(
+        "Failed to create lottery: " + (err.message || JSON.stringify(err))
+      );
     }
   };
 
@@ -219,7 +227,6 @@ export const AppProvider = ({ children }) => {
         pickWinner,
         claimPrize,
         refreshState,
-        assignParticipantRole,
       }}
     >
       {children}
