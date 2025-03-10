@@ -196,12 +196,6 @@ const LotteryDapp = () => {
                     handleClaimPrize={claimPrize}
                     address={address}
                   />
-                  <button
-                    onClick={refreshState}
-                    className="w-full mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                  >
-                    Refresh
-                  </button>
                 </div>
               </CardContent>
             </Card>

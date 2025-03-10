@@ -109,43 +109,6 @@ export const AppProvider = ({ children }) => {
       const contract = getContract(signer);
       console.log("Got contract with address:", contract.address);
 
-      toast.loading("Checking roles...");
-
-      // Check if user is participant
-      console.log("Checking if user is participant");
-      const isUserParticipant = await contract.isParticipant(address);
-      console.log("Is participant:", isUserParticipant);
-
-      if (!isUserParticipant) {
-        console.log("Assigning participant role");
-        toast.loading("Assigning participant role...");
-        const txRole = await contract.assignRole(address, "participant");
-        await txRole.wait();
-        toast.success("Participant role assigned!");
-      }
-
-      // Check if user is authority
-      console.log("Checking if user is authority");
-      const isUserAuthority = await contract.isAuthority(address);
-      console.log("Is authority:", isUserAuthority);
-
-      if (!isUserAuthority) {
-        console.log("Not authority, checking if owner");
-        const ownerAddress = await contract.owner();
-        console.log("Owner address:", ownerAddress);
-        console.log("Current address:", address);
-
-        if (ownerAddress.toLowerCase() !== address.toLowerCase()) {
-          toast.error("Only the owner can create lotteries initially");
-          return;
-        }
-
-        console.log("Is owner, assigning authority role");
-        const txRole = await contract.assignRole(address, "authority");
-        await txRole.wait();
-        toast.success("Authority role assigned!");
-      }
-
       console.log("Creating lottery with ticket price 0.01 ETH");
       toast.loading("Creating lottery...");
       const tx = await contract.createLottery(parseEther("0.01"));

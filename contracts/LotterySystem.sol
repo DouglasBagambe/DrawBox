@@ -54,7 +54,6 @@ contract LotterySystem {
     // Constructor
     constructor() {
         owner = msg.sender;
-        isAuthority[msg.sender] = true; // Owner is an authority
     }
 
     // Modifiers
@@ -69,7 +68,7 @@ contract LotterySystem {
     }
 
     // KRNL-inspired role management
-    function assignRole(address account, string memory role) external onlyAuthority {
+    function assignRole(address account, string memory role) external {
         if (keccak256(abi.encodePacked(role)) == keccak256(abi.encodePacked("authority"))) {
             isAuthority[account] = true;
         } else if (keccak256(abi.encodePacked(role)) == keccak256(abi.encodePacked("participant"))) {
@@ -78,7 +77,7 @@ contract LotterySystem {
         emit RoleAssigned(account, role);
     }
 
-    function createLottery(uint256 ticketPrice) external onlyAuthority {
+    function createLottery(uint256 ticketPrice) external {
         lotteryIdCounter++;
 
         Lottery storage lottery = lotteries[lotteryIdCounter];
@@ -112,8 +111,9 @@ contract LotterySystem {
         emit TicketPurchased(lotteryId, ticketId, msg.sender);
     }
 
-    function pickWinner(uint256 lotteryId) external onlyAuthority {
-        Lottery storage lottery = lotteries[lotteryId];
+    function pickWinner(uint256 lotteryId) external {
+    Lottery storage lottery = lotteries[lotteryId];
+    require(msg.sender == lottery.authority, "Only lottery creator can pick winner");
 
         if (lottery.winnerChosen) revert WinnerAlreadyExists();
         if (lottery.lastTicketId == 0) revert NoTickets();
