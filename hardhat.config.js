@@ -1,13 +1,33 @@
-require("@nomiclabs/hardhat-ethers");
-require("@nomiclabs/hardhat-waffle");
+require("@nomicfoundation/hardhat-toolbox");
+require("dotenv").config();
 
+const PRIVATE_KEY =
+  process.env.PRIVATE_KEY ||
+  "0x0000000000000000000000000000000000000000000000000000000000000000";
+
+/** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: "0.8.28", // Match your contract’s pragma
+  solidity: {
+    compilers: [
+      {
+        version: "0.8.28",
+      },
+      {
+        version: "0.8.20",
+      },
+    ],
+  },
   networks: {
-    hardhat: {}, // Local testing network
     localhost: {
-      url: "http://127.0.0.1:8545", // Default Hardhat node
+      url: "http://127.0.0.1:8545/",
     },
-    // Add testnet/mainnet later if needed
+    sepolia: {
+      url: "https://sepolia.infura.io/v3/YOUR_INFURA_KEY",
+      accounts: [PRIVATE_KEY],
+    },
+    baseSepolia: {
+      url: "https://sepolia.base.org",
+      accounts: [PRIVATE_KEY],
+    },
   },
 };

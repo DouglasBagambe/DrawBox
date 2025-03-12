@@ -10,8 +10,13 @@ import Header from "../components/Header"; // Add this import
 import { AppProvider } from "../context/context";
 
 const { chains, publicClient } = configureChains(
-  [localhost], // Switch to Sepolia/mainnet later
-  [publicProvider()]
+  [baseSepolia],
+  [
+    publicProvider({
+      rpcUrl:
+        "https://base-sepolia.g.alchemy.com/v2/ObApA1yoGgnk1RPYX6wHs29J6WDYYbNa",
+    }),
+  ]
 );
 
 const config = createConfig({

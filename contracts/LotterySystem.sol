@@ -1,18 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/**
- * @title LotterySystem
- * @dev A lottery system with KRNL-inspired roles and fairness
- */
-contract LotterySystem {
-    // State variables
+import {KRNL, KrnlPayload, KernelParameter, KernelResponse} from "./KRNL.sol";
+
+contract LotterySystem is KRNL {
     address public owner;
     uint256 public lotteryIdCounter;
-
-    // KRNL-inspired roles (simplified)
-    mapping(address => bool) public isAuthority; // Who can create/manage lotteries
-    mapping(address => bool) public isParticipant; // Who can buy tickets
 
     struct Lottery {
         uint256 id;
@@ -31,18 +24,14 @@ contract LotterySystem {
         address owner;
     }
 
-    // Mappings
     mapping(uint256 => Lottery) public lotteries;
     mapping(uint256 => mapping(uint256 => Ticket)) public tickets;
 
-    // Events
     event LotteryCreated(uint256 indexed lotteryId, address indexed authority, uint256 ticketPrice);
     event TicketPurchased(uint256 indexed lotteryId, uint256 indexed ticketId, address indexed buyer);
     event WinnerSelected(uint256 indexed lotteryId, uint256 indexed ticketId);
     event PrizeClaimed(uint256 indexed lotteryId, uint256 indexed ticketId, address indexed winner, uint256 amount);
-    event RoleAssigned(address indexed account, string role);
 
-    // Errors
     error WinnerAlreadyExists();
     error NoTickets();
     error WinnerNotChosen();
@@ -51,35 +40,12 @@ contract LotterySystem {
     error NotAuthorized();
     error InsufficientFunds();
 
-    // Constructor
-    constructor() {
+    constructor(address _tokenAuthorityPublicKey) KRNL(_tokenAuthorityPublicKey) {
         owner = msg.sender;
-    }
-
-    // Modifiers
-    modifier onlyAuthority() {
-        if (!isAuthority[msg.sender]) revert NotAuthorized();
-        _;
-    }
-
-    modifier onlyParticipant() {
-        if (!isParticipant[msg.sender]) revert NotAuthorized();
-        _;
-    }
-
-    // KRNL-inspired role management
-    function assignRole(address account, string memory role) external {
-        if (keccak256(abi.encodePacked(role)) == keccak256(abi.encodePacked("authority"))) {
-            isAuthority[account] = true;
-        } else if (keccak256(abi.encodePacked(role)) == keccak256(abi.encodePacked("participant"))) {
-            isParticipant[account] = true;
-        }
-        emit RoleAssigned(account, role);
     }
 
     function createLottery(uint256 ticketPrice) external {
         lotteryIdCounter++;
-
         Lottery storage lottery = lotteries[lotteryIdCounter];
         lottery.id = lotteryIdCounter;
         lottery.authority = msg.sender;
@@ -91,9 +57,8 @@ contract LotterySystem {
         emit LotteryCreated(lotteryIdCounter, msg.sender, ticketPrice);
     }
 
-    function buyTicket(uint256 lotteryId) external payable onlyParticipant {
+    function buyTicket(uint256 lotteryId) external payable {
         Lottery storage lottery = lotteries[lotteryId];
-
         if (lottery.authority == address(0)) revert("Lottery does not exist");
         if (lottery.winnerChosen) revert WinnerAlreadyExists();
         if (msg.value != lottery.ticketPrice) revert InsufficientFunds();
@@ -111,20 +76,23 @@ contract LotterySystem {
         emit TicketPurchased(lotteryId, ticketId, msg.sender);
     }
 
-    function pickWinner(uint256 lotteryId) external {
-    Lottery storage lottery = lotteries[lotteryId];
-    require(msg.sender == lottery.authority, "Only lottery creator can pick winner");
-
+    function pickWinner(KrnlPayload memory krnlPayload, uint256 lotteryId) 
+        external 
+        onlyAuthorized(krnlPayload, abi.encode(lotteryId)) 
+    {
+        Lottery storage lottery = lotteries[lotteryId];
+        require(msg.sender == lottery.authority, "Only lottery creator can pick winner");
         if (lottery.winnerChosen) revert WinnerAlreadyExists();
         if (lottery.lastTicketId == 0) revert NoTickets();
 
-        // Pseudo-random (KRNL might replace this with their randomness solution)
-        uint256 randomNumber = uint256(keccak256(abi.encodePacked(
-            block.timestamp,
-            blockhash(block.number - 1),
-            lotteryId,
-            msg.sender
-        )));
+        // Decode kernel response for randomness (assuming kernel ID 337 returns uint256)
+        KernelResponse[] memory kernelResponses = abi.decode(krnlPayload.kernelResponses, (KernelResponse[]));
+        uint256 randomNumber;
+        for (uint i = 0; i < kernelResponses.length; i++) {
+            if (kernelResponses[i].kernelId == 337) { // Replace with real kernel ID
+                randomNumber = abi.decode(kernelResponses[i].result, (uint256));
+            }
+        }
 
         uint256 winnerId = (randomNumber % lottery.lastTicketId) + 1;
         lottery.winnerId = winnerId;

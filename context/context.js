@@ -19,6 +19,7 @@ import {
   getTotalPrize,
   parseEther,
 } from "../utils/contract";
+import { executeKernels } from "krnl-sdk";
 
 export const AppContext = createContext();
 
@@ -42,7 +43,10 @@ export const AppProvider = ({ children }) => {
   // );
 
   const provider = useMemo(
-    () => new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545"),
+    () =>
+      new ethers.providers.JsonRpcProvider(
+        "https://base-sepolia.g.alchemy.com/v2/ObApA1yoGgnk1RPYX6wHs29J6WDYYbNa"
+      ),
     []
   );
 
@@ -150,10 +154,42 @@ export const AppProvider = ({ children }) => {
   const pickWinner = async () => {
     try {
       const contract = getContract(signer);
-      const tx = await contract.pickWinner(lotteryId);
+      const krnlProvider = new ethers.providers.JsonRpcProvider(
+        "https://v0-0-1-rpc.node.lat"
+      ); // KRNL RPC
+      const entryId = "YOUR_ENTRY_ID"; // From KRNL dApp registration
+      const accessToken = "YOUR_ACCESS_TOKEN"; // From KRNL dApp registration
+      const kernelRequestData = {
+        senderAddress: address,
+        kernelPayload: {
+          337: {
+            // Placeholder kernel ID
+            functionParams: ethers.utils.defaultAbiCoder.encode([], []),
+          },
+        },
+      };
+      const functionParams = ethers.utils.defaultAbiCoder.encode(
+        ["uint256"],
+        [lotteryId]
+      );
+      const krnlPayload = await executeKernels(
+        krnlProvider,
+        entryId,
+        accessToken,
+        kernelRequestData,
+        functionParams
+      );
+      const tx = await contract.pickWinner(
+        {
+          auth: krnlPayload.auth,
+          kernelResponses: krnlPayload.kernelResponses,
+          kernelParams: krnlPayload.kernelParams,
+        },
+        lotteryId
+      );
       await tx.wait();
-      toast.success("Winner picked!");
-      await updateState(); // Force refresh
+      toast.success("Winner picked with KRNL randomness!");
+      await updateState();
     } catch (err) {
       toast.error("Failed to pick winner: " + err.message);
     }
